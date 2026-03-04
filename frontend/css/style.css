@@ -36,6 +36,35 @@ body {
 .page { display: none; min-height: 100dvh; }
 .page.active { display: block; }
 
+/* ===== Leads Header ===== */
+.leads-header,
+.admin-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.admin-btn {
+  background: rgba(255,255,255,.18);
+  border: none;
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 100px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--transition);
+}
+
+.admin-btn:active { background: rgba(255,255,255,.3); }
+
 /* ===== Header ===== */
 .app-header {
   background: var(--color-primary);
@@ -120,6 +149,8 @@ body {
   top: 61px;
   z-index: 90;
 }
+
+.excel-select-wrap { margin-bottom: 8px; }
 
 .filter-chips {
   display: flex;
@@ -654,3 +685,82 @@ body {
 }
 
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== Template Card ===== */
+.template-desc {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.btn-outline-primary {
+  background: transparent;
+  color: var(--color-primary);
+  border: 1.5px solid var(--color-primary);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+  font-weight: 600;
+  width: 100%;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--transition), transform var(--transition);
+}
+
+.btn-outline-primary:hover { background: #eff6ff; }
+.btn-outline-primary:active { transform: scale(0.97); }
+
+/* ===== Admin File List ===== */
+.file-list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.file-list-item:last-child { border-bottom: none; }
+
+.file-list-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.file-list-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-list-meta {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.file-delete-btn {
+  background: transparent;
+  border: 1.5px solid var(--color-danger);
+  color: var(--color-danger);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 0.95rem;
+  -webkit-tap-highlight-color: transparent;
+  transition: background var(--transition);
+}
+
+.file-delete-btn:active { background: var(--color-danger-light); }

@@ -1,38 +1,40 @@
 /* ===== Config ===== */
 const API_BASE = '/api';
+const LAST_EXCEL_KEY = 'lastExcelId';
 
 /* ===== State ===== */
 const state = {
+  excelList: [],
   selectedExcelId: null,
   selectedExcelName: '',
   contacts: [],
   notesMap: {},
-  filterMode: 'all',      // 'all' | 'with-note' | 'without-note'
+  filterMode: 'all',
   searchQuery: '',
   noteModal: { rowIndex: null, noteId: null },
 };
 
 /* ===== DOM References ===== */
-// Home page
-const fileInput       = document.getElementById('fileInput');
-const dropZone        = document.getElementById('dropZone');
-const selectedFileEl  = document.getElementById('selectedFile');
-const uploadBtn       = document.getElementById('uploadBtn');
-const uploadStatus    = document.getElementById('uploadStatus');
-const excelSelect     = document.getElementById('excelSelect');
-const openExcelBtn    = document.getElementById('openExcelBtn');
-const deleteExcelBtn  = document.getElementById('deleteExcelBtn');
+// Pages
+const leadsPage        = document.getElementById('leadsPage');
+const adminPage        = document.getElementById('adminPage');
 
-// Contacts page
-const homePage        = document.getElementById('homePage');
-const contactsPage    = document.getElementById('contactsPage');
-const backBtn         = document.getElementById('backBtn');
-const contactsTitle   = document.getElementById('contactsTitle');
-const contactsCount   = document.getElementById('contactsCount');
-const headerDeleteBtn = document.getElementById('headerDeleteBtn');
-const searchInput     = document.getElementById('searchInput');
-const filterChips     = document.querySelectorAll('.chip');
-const contactsList    = document.getElementById('contactsList');
+// Leads page
+const adminBtn         = document.getElementById('adminBtn');
+const leadsExcelSelect = document.getElementById('leadsExcelSelect');
+const contactsCount    = document.getElementById('contactsCount');
+const searchInput      = document.getElementById('searchInput');
+const filterChips      = document.querySelectorAll('.chip');
+const contactsList     = document.getElementById('contactsList');
+
+// Admin page
+const adminBackBtn     = document.getElementById('adminBackBtn');
+const fileInput        = document.getElementById('fileInput');
+const dropZone         = document.getElementById('dropZone');
+const selectedFileEl   = document.getElementById('selectedFile');
+const uploadBtn        = document.getElementById('uploadBtn');
+const uploadStatus     = document.getElementById('uploadStatus');
+const adminFileList    = document.getElementById('adminFileList');
 
 // Note modal
 const noteModal        = document.getElementById('noteModal');
@@ -49,12 +51,13 @@ const toast = document.getElementById('toast');
 
 /* ===== Page Navigation ===== */
 function showPage(page) {
-  homePage.classList.toggle('active', page === 'home');
-  contactsPage.classList.toggle('active', page === 'contacts');
+  leadsPage.classList.toggle('active', page === 'leads');
+  adminPage.classList.toggle('active', page === 'admin');
   window.scrollTo(0, 0);
 }
 
-backBtn.addEventListener('click', () => showPage('home'));
+adminBtn.addEventListener('click', () => showPage('admin'));
+adminBackBtn.addEventListener('click', () => showPage('leads'));
 
 /* ===== Toast ===== */
 let toastTimer = null;
@@ -79,9 +82,7 @@ function hideStatus(el) { el.classList.add('hidden'); }
 async function apiFetch(url, options = {}) {
   const response = await fetch(url, options);
   const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data.message || `Request failed (${response.status})`);
-  }
+  if (!response.ok) throw new Error(data.message || `Request failed (${response.status})`);
   return data;
 }
 
@@ -134,8 +135,9 @@ uploadBtn.addEventListener('click', async () => {
     selectedFileEl.textContent = '';
     await loadExcelList();
     if (res.data?.id) {
-      excelSelect.value = res.data.id;
-      excelSelect.dispatchEvent(new Event('change'));
+      const item = state.excelList.find((i) => i.id === res.data.id);
+      await selectExcel(res.data.id, item?.originalName ?? res.data.originalName);
+      showPage('leads');
     }
   } catch (err) {
     showStatus(uploadStatus, err.message, 'error');
@@ -149,81 +151,93 @@ uploadBtn.addEventListener('click', async () => {
 async function loadExcelList() {
   try {
     const res = await apiFetch(`${API_BASE}/excel/list`);
-    const list = res.data;
-    const currentVal = excelSelect.value;
-
-    excelSelect.innerHTML = '<option value="">— Choose an uploaded file —</option>';
-    list.forEach((item) => {
-      const option = document.createElement('option');
-      option.value = item.id;
-      const date = new Date(item.uploadDate).toLocaleDateString('en-IN', {
-        day: '2-digit', month: 'short', year: 'numeric',
-      });
-      option.textContent = `${item.originalName} (${item.recordCount} contacts · ${date})`;
-      excelSelect.appendChild(option);
-    });
-
-    if (currentVal && [...excelSelect.options].some((o) => o.value === currentVal)) {
-      excelSelect.value = currentVal;
-    }
-
-    syncHomeButtons();
+    state.excelList = res.data;
+    renderLeadsDropdown();
+    renderAdminFileList();
   } catch (err) {
     showToast('Failed to load file list: ' + err.message, 'error');
   }
 }
 
-function syncHomeButtons() {
-  const hasSelection = !!excelSelect.value;
-  openExcelBtn.disabled = !hasSelection;
-  deleteExcelBtn.hidden = !hasSelection;
-}
+function renderLeadsDropdown() {
+  leadsExcelSelect.innerHTML = '<option value="">— Select a contacts list —</option>';
+  state.excelList.forEach((item) => {
+    const option = document.createElement('option');
+    option.value = item.id;
+    const date = new Date(item.uploadDate).toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+    });
+    option.textContent = `${item.originalName} (${item.recordCount} · ${date})`;
+    leadsExcelSelect.appendChild(option);
+  });
 
-excelSelect.addEventListener('change', syncHomeButtons);
-
-openExcelBtn.addEventListener('click', async () => {
-  const id = excelSelect.value;
-  if (!id) return;
-  const name = excelSelect.selectedOptions[0]?.textContent ?? 'Contacts';
-  state.selectedExcelId = id;
-  state.selectedExcelName = name;
-  await openContactsPage(id, name);
-});
-
-deleteExcelBtn.addEventListener('click', () => deleteCurrentExcel());
-headerDeleteBtn.addEventListener('click', () => deleteCurrentExcel());
-
-async function deleteCurrentExcel() {
-  const id = state.selectedExcelId || excelSelect.value;
-  if (!id) return;
-
-  const name = state.selectedExcelName || excelSelect.selectedOptions[0]?.textContent || 'this file';
-  if (!confirm(`Delete "${name}"?\n\nAll contacts and notes will be permanently removed.`)) return;
-
-  try {
-    await apiFetch(`${API_BASE}/excel/${id}`, { method: 'DELETE' });
-    showToast('File deleted', 'success');
-    state.selectedExcelId = null;
-    state.contacts = [];
-    state.notesMap = {};
-    showPage('home');
-    await loadExcelList();
-  } catch (err) {
-    showToast('Delete failed: ' + err.message, 'error');
+  if (state.selectedExcelId && [...leadsExcelSelect.options].some((o) => o.value === state.selectedExcelId)) {
+    leadsExcelSelect.value = state.selectedExcelId;
   }
 }
 
-/* ===== Open Contacts Page ===== */
-async function openContactsPage(excelId, name) {
-  // Set title immediately and show page
-  contactsTitle.textContent = name.replace(/\s*\(.*\)$/, ''); // strip "(N contacts · date)" suffix
+function renderAdminFileList() {
+  if (state.excelList.length === 0) {
+    adminFileList.innerHTML = '<div class="empty-state"><p>No files uploaded yet.</p></div>';
+    return;
+  }
+
+  adminFileList.innerHTML = '';
+  state.excelList.forEach((item) => {
+    const date = new Date(item.uploadDate).toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+    });
+
+    const row = document.createElement('div');
+    row.className = 'file-list-item';
+    row.innerHTML = `
+      <div class="file-list-info">
+        <div class="file-list-name">${escapeHtml(item.originalName)}</div>
+        <div class="file-list-meta">${item.recordCount} contacts · ${date}</div>
+      </div>
+      <button class="file-delete-btn" data-id="${item.id}" aria-label="Delete ${escapeHtml(item.originalName)}">🗑</button>
+    `;
+    adminFileList.appendChild(row);
+  });
+
+  adminFileList.querySelectorAll('.file-delete-btn').forEach((btn) => {
+    btn.addEventListener('click', () => deleteExcelById(btn.dataset.id));
+  });
+}
+
+/* ===== Excel Selection ===== */
+leadsExcelSelect.addEventListener('change', async () => {
+  const id = leadsExcelSelect.value;
+  if (!id) {
+    state.selectedExcelId = null;
+    state.selectedExcelName = '';
+    state.contacts = [];
+    state.notesMap = {};
+    contactsCount.textContent = '';
+    contactsList.innerHTML = '<div class="empty-state"><p>Select a contacts list above to get started.</p></div>';
+    localStorage.removeItem(LAST_EXCEL_KEY);
+    return;
+  }
+  const name = leadsExcelSelect.selectedOptions[0]?.textContent ?? '';
+  await selectExcel(id, name);
+});
+
+async function selectExcel(id, name) {
+  state.selectedExcelId = id;
+  state.selectedExcelName = name;
+  leadsExcelSelect.value = id;
+  localStorage.setItem(LAST_EXCEL_KEY, id);
+  await loadContacts(id);
+}
+
+/* ===== Load Contacts ===== */
+async function loadContacts(excelId) {
   contactsCount.textContent = '';
   contactsList.innerHTML = '<div class="loading-indicator"><div class="spinner"></div>Loading contacts…</div>';
   searchInput.value = '';
   state.searchQuery = '';
   state.filterMode = 'all';
   updateFilterChips();
-  showPage('contacts');
 
   try {
     const [contactsRes, notesRes] = await Promise.all([
@@ -233,11 +247,34 @@ async function openContactsPage(excelId, name) {
 
     state.contacts = contactsRes.data.records;
     state.notesMap = notesRes.data;
-
     contactsCount.textContent = `${state.contacts.length} contacts`;
     applyFilters();
   } catch (err) {
     contactsList.innerHTML = `<div class="empty-state"><p>Failed to load contacts: ${escapeHtml(err.message)}</p></div>`;
+  }
+}
+
+/* ===== Delete Excel ===== */
+async function deleteExcelById(id) {
+  const item = state.excelList.find((i) => i.id === id);
+  const name = item?.originalName ?? 'this file';
+  if (!confirm(`Delete "${name}"?\n\nAll contacts and notes will be permanently removed.`)) return;
+
+  try {
+    await apiFetch(`${API_BASE}/excel/${id}`, { method: 'DELETE' });
+    showToast('File deleted', 'success');
+    if (state.selectedExcelId === id) {
+      state.selectedExcelId = null;
+      state.selectedExcelName = '';
+      state.contacts = [];
+      state.notesMap = {};
+      contactsCount.textContent = '';
+      contactsList.innerHTML = '<div class="empty-state"><p>Select a contacts list above to get started.</p></div>';
+      localStorage.removeItem(LAST_EXCEL_KEY);
+    }
+    await loadExcelList();
+  } catch (err) {
+    showToast('Delete failed: ' + err.message, 'error');
   }
 }
 
@@ -269,14 +306,12 @@ function updateFilterChips() {
 function applyFilters() {
   let result = state.contacts;
 
-  // Note filter
   if (state.filterMode === 'with-note') {
     result = result.filter((c) => !!state.notesMap[c.rowIndex]);
   } else if (state.filterMode === 'without-note') {
     result = result.filter((c) => !state.notesMap[c.rowIndex]);
   }
 
-  // Search filter
   if (state.searchQuery) {
     const q = state.searchQuery;
     result = result.filter((c) =>
@@ -301,29 +336,15 @@ function splitMultiple(value) {
   return value.split('/').map((v) => v.trim()).filter(Boolean);
 }
 
-/**
- * Sanitize a raw LinkedIn cell value into a usable https:// URL.
- * Returns null if the value is blank, "NF", or unrecognisable.
- */
 function sanitizeLinkedIn(raw) {
   if (!raw) return null;
   const t = raw.trim();
-
-  // Known non-values
   const SKIP = ['nf', 'n/a', 'na', '-', '--', 'nil', 'none', 'null', 'not available', 'not found'];
   if (SKIP.includes(t.toLowerCase())) return null;
-
-  // Already has a protocol
   if (/^https?:\/\//i.test(t)) return t;
-
-  // Bare domain or path that contains any linkedin.com variant
-  // e.g. linkedin.com/in/... | www.linkedin.com/in/... | in.linkedin.com/in/...
   if (/linkedin\.com/i.test(t)) return 'https://' + t;
-
-  // Relative path like /in/username or in/username
   if (/^\/?in\//i.test(t)) return 'https://www.linkedin.com/' + t.replace(/^\//, '');
-
-  return null; // unrecognised — don't render a broken link
+  return null;
 }
 
 function buildPhoneLinks(numberStr, rowIndex) {
@@ -376,7 +397,7 @@ function renderContacts(contacts) {
     card.innerHTML = `
       <div class="contact-main">
         <div class="contact-name">${escapeHtml(contact.name || '—')}</div>
-        ${contact.company    ? `<div class="contact-company">${escapeHtml(contact.company)}</div>` : ''}
+        ${contact.company     ? `<div class="contact-company">${escapeHtml(contact.company)}</div>` : ''}
         ${contact.designation ? `<div class="contact-designation">${escapeHtml(contact.designation)}</div>` : ''}
         <div class="phone-list">${buildPhoneLinks(contact.number, contact.rowIndex)}</div>
         ${hasNote ? `<div class="note-badge has-note">📝 Has note</div>` : ''}
@@ -470,11 +491,7 @@ saveNoteBtn.addEventListener('click', async () => {
   const noteText = noteTextarea.value.trim();
 
   if (rowIndex === null) return;
-
-  if (!noteText) {
-    showStatus(noteStatus, 'Note cannot be empty.', 'error');
-    return;
-  }
+  if (!noteText) { showStatus(noteStatus, 'Note cannot be empty.', 'error'); return; }
 
   saveNoteBtn.disabled = true;
   saveNoteBtn.textContent = 'Saving…';
@@ -491,7 +508,6 @@ saveNoteBtn.addEventListener('click', async () => {
     updateContactNoteUI(rowIndex, noteText);
     showToast('Note saved', 'success');
     closeNoteModal();
-    // If filter is active re-apply so the card may hide/show
     if (state.filterMode !== 'all') applyFilters();
   } catch (err) {
     showStatus(noteStatus, err.message, 'error');
@@ -572,4 +588,21 @@ function dialSequentially(numbers, index) {
 }
 
 /* ===== Init ===== */
-loadExcelList();
+async function init() {
+  contactsList.innerHTML = '<div class="loading-indicator"><div class="spinner"></div>Loading…</div>';
+
+  await loadExcelList();
+
+  const lastId = localStorage.getItem(LAST_EXCEL_KEY);
+  if (lastId && state.excelList.some((item) => item.id === lastId)) {
+    const item = state.excelList.find((i) => i.id === lastId);
+    await selectExcel(lastId, item.originalName);
+  } else if (state.excelList.length === 0) {
+    showPage('admin');
+    contactsList.innerHTML = '<div class="empty-state"><p>Upload a contacts list to get started.</p></div>';
+  } else {
+    contactsList.innerHTML = '<div class="empty-state"><p>Select a contacts list above to get started.</p></div>';
+  }
+}
+
+init();

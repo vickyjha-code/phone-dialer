@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { uploadExcel, getExcelList, getExcelContacts, deleteExcel } from './upload-excel.controller';
+import { uploadExcel, getExcelList, getExcelContacts, deleteExcel, generateTemplate } from './upload-excel.controller';
 import { createError } from '../common/middleware/errorHandler';
 
 export async function handleUploadExcel(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -42,6 +42,17 @@ export async function handleGetExcelContacts(req: Request, res: Response, next: 
       success: true,
       data,
     });
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function handleGetTemplate(_req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const buffer = await generateTemplate();
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', 'attachment; filename="contacts_template.xlsx"');
+    res.send(buffer);
   } catch (err) {
     next(err);
   }

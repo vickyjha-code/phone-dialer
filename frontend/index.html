@@ -3,16 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-  <title>Phone Dialer</title>
+  <title>B2B Power Dialer</title>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
 
-  <!-- ===== Page 1: Home ===== -->
-  <div id="homePage" class="page active">
+  <!-- ===== Page: Leads (default) ===== -->
+  <div id="leadsPage" class="page active">
 
-    <header class="app-header">
-      <h1 class="app-title">Phone Dialer</h1>
+    <header class="app-header leads-header">
+      <div class="header-title-wrap">
+        <h1 class="app-title">B2B Power Dialer</h1>
+        <span class="contacts-count" id="contactsCount"></span>
+      </div>
+      <button class="admin-btn" id="adminBtn" aria-label="Go to Admin">⚙ Admin</button>
+    </header>
+
+    <div class="contacts-toolbar">
+      <div class="select-wrapper excel-select-wrap">
+        <select id="leadsExcelSelect" class="select-input">
+          <option value="">— Select a contacts list —</option>
+        </select>
+      </div>
+      <input type="search" id="searchInput" placeholder="Search name, company, number…" class="search-input" />
+      <div class="filter-chips" role="group" aria-label="Filter contacts">
+        <button class="chip active" data-filter="all">All</button>
+        <button class="chip" data-filter="with-note">📝 With Note</button>
+        <button class="chip" data-filter="without-note">No Note</button>
+      </div>
+    </div>
+
+    <div class="container contacts-container">
+      <div id="contactsList"></div>
+    </div>
+
+  </div>
+
+  <!-- ===== Page: Admin ===== -->
+  <div id="adminPage" class="page">
+
+    <header class="app-header admin-header">
+      <button class="back-btn" id="adminBackBtn" aria-label="Back to Leads">←</button>
+      <div class="header-title-wrap">
+        <h1 class="app-title">Admin</h1>
+      </div>
     </header>
 
     <main class="container">
@@ -31,46 +65,22 @@
         <div id="uploadStatus" class="status-msg hidden"></div>
       </section>
 
-      <!-- Excel Selector -->
+      <!-- Template Download -->
       <section class="card">
-        <h2 class="section-title">Select Contacts List</h2>
-        <div class="select-wrapper">
-          <select id="excelSelect" class="select-input">
-            <option value="">— Choose an uploaded file —</option>
-          </select>
+        <h2 class="section-title">Excel Template</h2>
+        <p class="template-desc">Download the template to see the required column format before uploading your contacts.</p>
+        <a href="/api/excel/template" class="btn btn-outline-primary" download>⬇ Download Template</a>
+      </section>
+
+      <!-- Uploaded Files List -->
+      <section class="card">
+        <h2 class="section-title">Uploaded Files</h2>
+        <div id="adminFileList">
+          <div class="loading-indicator"><div class="spinner"></div>Loading…</div>
         </div>
-        <button class="btn btn-primary" id="openExcelBtn" disabled>Open Contacts →</button>
-        <button class="btn btn-secondary" id="deleteExcelBtn" hidden>🗑 Delete Selected</button>
       </section>
 
     </main>
-  </div>
-
-  <!-- ===== Page 2: Contacts ===== -->
-  <div id="contactsPage" class="page">
-
-    <header class="app-header contacts-header">
-      <button class="back-btn" id="backBtn" aria-label="Back">←</button>
-      <div class="header-title-wrap">
-        <h1 class="app-title" id="contactsTitle">Contacts</h1>
-        <span class="contacts-count" id="contactsCount"></span>
-      </div>
-      <button class="header-delete-btn" id="headerDeleteBtn" aria-label="Delete file">🗑</button>
-    </header>
-
-    <div class="contacts-toolbar">
-      <input type="search" id="searchInput" placeholder="Search name, company, number…" class="search-input" />
-      <div class="filter-chips" role="group" aria-label="Filter contacts">
-        <button class="chip active" data-filter="all">All</button>
-        <button class="chip" data-filter="with-note">📝 With Note</button>
-        <button class="chip" data-filter="without-note">No Note</button>
-      </div>
-    </div>
-
-    <div class="container contacts-container">
-      <div id="contactsList"></div>
-    </div>
-
   </div>
 
   <!-- ===== Note Modal (global) ===== -->

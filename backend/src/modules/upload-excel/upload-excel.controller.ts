@@ -174,6 +174,44 @@ export async function getExcelContacts(excelId: string) {
   };
 }
 
+export async function generateTemplate(): Promise<Buffer> {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet('Contacts');
+
+  sheet.columns = [
+    { header: 'Name', key: 'name', width: 22 },
+    { header: 'Company', key: 'company', width: 25 },
+    { header: 'Designation', key: 'designation', width: 22 },
+    { header: 'Phone Number', key: 'number', width: 22 },
+    { header: 'Email', key: 'email', width: 28 },
+    { header: 'Location', key: 'location', width: 18 },
+    { header: 'LinkedIn', key: 'linkedin', width: 35 },
+    { header: 'Industry', key: 'industry', width: 22 },
+    { header: 'Employee Size', key: 'employeeSize', width: 16 },
+  ];
+
+  const headerRow = sheet.getRow(1);
+  headerRow.font = { bold: true, color: { argb: 'FF1D4ED8' } };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0EAFF' } };
+  headerRow.alignment = { vertical: 'middle' };
+  headerRow.height = 20;
+
+  sheet.addRow({
+    name: 'John Doe',
+    company: 'Acme Corp',
+    designation: 'CTO',
+    number: '9876543210',
+    email: 'john@acme.com',
+    location: 'Mumbai',
+    linkedin: 'linkedin.com/in/johndoe',
+    industry: 'Technology',
+    employeeSize: '50-200',
+  });
+
+  const buf = await workbook.xlsx.writeBuffer();
+  return Buffer.from(buf);
+}
+
 export async function deleteExcel(excelId: string) {
   if (!Types.ObjectId.isValid(excelId)) {
     throw createError('Invalid Excel ID', 400);
